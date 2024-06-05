@@ -18,7 +18,7 @@ std = StandardScaler()
 st.title("ANN Playground")
 
 # Change directory to where your CSV files are located
-os.chdir("C://Users//ASUS/Documents//Innomatics Jupyter notebooks//Deep Learning//Multiple CSV")
+os.chdir("//data")
 
 # Load the dataset
 st.sidebar.header("Dataset Selection")
