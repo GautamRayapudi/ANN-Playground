@@ -1,4 +1,5 @@
 import os
+import requests
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -14,20 +15,38 @@ from keras.callbacks import Callback
 
 std = StandardScaler()
 
+# Updated URLs
+base_url = "https://api.github.com/repos/GautamRayapudi/ANN-Playground/contents/data"
+raw_base_url = "https://raw.githubusercontent.com/GautamRayapudi/ANN-Playground/main/data"
+
+# Function to list files in the 'data' directory
+@st.cache_data
+def list_files():
+    response = requests.get(base_url)
+    if response.status_code == 200:
+        files = response.json()
+        return [file['name'] for file in files if file['type'] == 'file']
+    else:
+        st.error("Error fetching file list from GitHub")
+        return []
+
+# Function to load the selected CSV file
+def load_data(file_name):
+    file_url = f"{raw_base_url}/{file_name}"
+    return pd.read_csv(file_url)
+
 # Set up the Streamlit layout
 st.title("ANN Playground")
-
-# Change directory to where your CSV files are located
-os.chdir("//data")
-
 # Load the dataset
 st.sidebar.header("Dataset Selection")
-available_datasets = os.listdir()
+available_datasets = list_files()
 dataset_index = st.sidebar.selectbox("Select the type of dataset", range(len(available_datasets)), format_func=lambda x: available_datasets[x])
 data_file = available_datasets[dataset_index]
-file_path = os.path.join(os.getcwd(), data_file)
 
-df = pd.read_csv(file_path)
+df = load_data(data_file)
+if df is None:
+    st.stop()
+
 X = df.iloc[:, :-1]
 y = df.iloc[:, -1]
 n_classes = len(np.unique(y))
@@ -39,8 +58,6 @@ regularizer_choice = st.sidebar.selectbox("Regularizer", ['None', 'L1', 'L2', 'E
 batch = st.sidebar.slider("Batch size", 1, 30, 10)
 epoch = st.sidebar.number_input("Number of epochs", 1, 100, 10)
 hidden_layers = st.sidebar.number_input("Number of hidden layers", 1)
-
-
 
 # Set regularizer
 if regularizer_choice == 'L1':
@@ -57,7 +74,7 @@ hidden_sizes = []
 activation_list = []
 for i in range(hidden_layers):
     hidden_size = st.sidebar.number_input(f"Neurons in hidden layer {i + 1}", 1, 10, 1)
-    active_hidden = st.sidebar.selectbox(f"Activation function for hidden layer{i+1}", ['sigmoid', 'tanh','relu'])
+    active_hidden = st.sidebar.selectbox(f"Activation function for hidden layer {i+1}", ['sigmoid', 'tanh','relu'])
     hidden_sizes.append(hidden_size)
     activation_list.append(active_hidden)
 
@@ -79,19 +96,19 @@ input_shape = (X.shape[1],)
 def build_model():
     inputs = Input(shape=input_shape)
     x = inputs
-    for size,active in zip(hidden_sizes,activation_list):
+    for size, active in zip(hidden_sizes, activation_list):
         x = Dense(units=size, activation=active, kernel_regularizer=regularizer)(x)
     
     if n_classes > 2:
         outputs = Dense(units=n_classes, activation=active_output, kernel_regularizer=regularizer)(x)
         model = Model(inputs=inputs, outputs=outputs)
         model.compile(optimizer='adam', loss="categorical_crossentropy", metrics=["accuracy"])
-        y_train_encoded = std.fit_transform(y_train.values.reshape(-1, 1))
+        y_train_encoded = pd.get_dummies(y_train).values
     else:
         outputs = Dense(units=1, activation=active_output, kernel_regularizer=regularizer)(x)
         model = Model(inputs=inputs, outputs=outputs)
         model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-        y_train_encoded = std.fit_transform(y_train.values.reshape(-1, 1))
+        y_train_encoded = y_train.values.reshape(-1, 1)
 
     return model, y_train_encoded
 
@@ -150,7 +167,7 @@ if st.session_state.model is not None:
 
     # Plot decision regions
     if st.sidebar.button("Plot Decision Regions"):
-        if n_classes<=2:
+        if n_classes <= 2:
             with st.spinner("Plotting decision regions..."):
                 # Create a model for intermediate output
                 intermediate_layer_model = Model(inputs=st.session_state.model.input, outputs=st.session_state.model.layers[intermediate_layer_index].output)
@@ -175,7 +192,7 @@ if st.session_state.model is not None:
                 plt.title('Decision Regions')
                 st.pyplot(fig)
         else:
-             with st.spinner("Plotting decision regions..."):
+            with st.spinner("Plotting decision regions..."):
                 # Create a model for intermediate output
                 intermediate_layer_model = Model(inputs=st.session_state.model.input, outputs=st.session_state.model.layers[intermediate_layer_index].output)
 
