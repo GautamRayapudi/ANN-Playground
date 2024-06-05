@@ -15,7 +15,6 @@ from keras.callbacks import Callback
 
 std = StandardScaler()
 
-# Updated URLs
 base_url = "https://api.github.com/repos/GautamRayapudi/ANN-Playground/contents/data"
 raw_base_url = "https://raw.githubusercontent.com/GautamRayapudi/ANN-Playground/main/data"
 
