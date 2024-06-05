@@ -102,12 +102,12 @@ def build_model():
         outputs = Dense(units=n_classes, activation=active_output, kernel_regularizer=regularizer)(x)
         model = Model(inputs=inputs, outputs=outputs)
         model.compile(optimizer='adam', loss="categorical_crossentropy", metrics=["accuracy"])
-        y_train_encoded = pd.get_dummies(y_train).values
+        y_train_encoded = std.fit_transform(y_train.values.reshape(-1, 1))
     else:
         outputs = Dense(units=1, activation=active_output, kernel_regularizer=regularizer)(x)
         model = Model(inputs=inputs, outputs=outputs)
         model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-        y_train_encoded = y_train.values.reshape(-1, 1)
+        y_train_encoded = std.fit_transform(y_train.values.reshape(-1, 1))
 
     return model, y_train_encoded
 
